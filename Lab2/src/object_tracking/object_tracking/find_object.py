@@ -39,22 +39,27 @@ class FindObject(Node):
             '/selected_hsv',
             self.hsv_values_callback,
             10)
+        
+        self.obj_center_publisher = self.create_publisher(
+            Int32MultiArray,
+            '/obj_center',
+            10
+        )
 
         self.bridge = CvBridge()
         self.image_frame = None
         self.hsv_frame = None
-
+        self.last_frame = None
 
 
     def compressed_image_callback(self, msg):
         self.image_frame = self.bridge.compressed_imgmsg_to_cv2(msg)
         self.hsv_frame = cv2.cvtColor(self.image_frame, cv2.COLOR_BGR2HSV)
-
-    
+        self.update_display()
 
     def hsv_values_callback(self, msg):
         # self.get_logger().info('I heard: "%s"' % msg)
-        print("Msg is : ",msg)
+        print("Inside hsv callback, msg is : ",msg)
 
         #Track objects in the range of HSV =- 20, +- 50, =- 50
 
@@ -63,9 +68,11 @@ class FindObject(Node):
         v =  msg.data[2]
 
         lower_bound = np.array([max(0, h-20), max(0, s-50), max(0, v-50)])
-        upper_bound = np.array([min(179, h+20), max(255, s+50), max(255, v+50)])
+        upper_bound = np.array([min(179, h+20), min(255, s+50), min(255, v+50)])
 
-
+        if self.hsv_frame is None:
+            print("Cant proceed cause hsv frame is none")
+            return
         #Make a mask (binary image) in image of pixels within hsv range of [lower bound, upper bound]
         mask = cv2.inRange(self.hsv_frame, lower_bound, upper_bound)
 
@@ -76,19 +83,17 @@ class FindObject(Node):
             if cv2.contourArea(largest_contour)>500: #More than 500 pixels in our object
                 x, y, w, h = cv2.boundingRect(largest_contour)
                 cv2.rectangle(self.image_frame, (x,y), (x+w, y+h), (0, 255, 0), 2) #2 is thickness, Red color.
-
-        self.update_display()
+                print("Inside hsv callback, Found an object, published to obj_center")
+                self.obj_center_publisher.publish(Int32MultiArray(data = [int(x+w/2), int(y+h/2)]))
+                self.update_display()
     
     def update_display(self):
-        print("Update display called!")
+        print("Inside Update display")
         if self.image_frame is not None:
+            print("Inside Update display, Called cv imshow")
             cv2.imshow("Find Object Panel", self.image_frame)
 
         cv2.waitKey(1) #This also returns the key pressed in 1 ms, so we can close loop with it if we wanted to
-
-
-
-
 
 
 def main(args=None):

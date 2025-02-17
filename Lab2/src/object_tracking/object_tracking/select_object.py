@@ -7,7 +7,6 @@ import numpy as np
 from cv_bridge import CvBridge
 
 class SelectObject(Node):
-
     def __init__(self):
         super().__init__('SelectObject')
         self.subscription = self.create_subscription(
@@ -46,9 +45,8 @@ class SelectObject(Node):
         if event == cv2.EVENT_LBUTTONDOWN:
             print("Image clicked callback called with x,y:", x,y)
             hsv_frame = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2HSV)
-            selected_hsv = hsv_frame[y, x]
-            msg = Int32MultiArray(data = selected_hsv.tolist())
-            self.hsv_publisher.publish(msg)
+            self.selected_hsv = hsv_frame[y, x]
+            self.hsv_publisher.publish(Int32MultiArray(data = self.selected_hsv.tolist()))
             print("Published hsv values: ", msg)
     
     def tracked_image_callback(self, msg):
@@ -56,6 +54,8 @@ class SelectObject(Node):
         self.update_display()
 
     def update_display(self):
+        if self.selected_hsv is not None:
+            self.hsv_publisher.publish(Int32MultiArray(data = self.selected_hsv.tolist()))
         if self.tracked_frame is not None:
             cv2.imshow("Select Object", self.tracked_frame)
         else:
