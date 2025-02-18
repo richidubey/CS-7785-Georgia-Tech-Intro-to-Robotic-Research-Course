@@ -22,7 +22,8 @@ setup(
         'console_scripts': [
             'select_object=object_tracking.select_object:main',
             'find_object=object_tracking.find_object:main',
-            'rotate_robot=object_tracking.rotate_robot:main',
+            'get_object_range=object_tracking.get_object_range:main'
+            'chase_object=object_tracking.chase_object:main',
         ],
     },
 )
