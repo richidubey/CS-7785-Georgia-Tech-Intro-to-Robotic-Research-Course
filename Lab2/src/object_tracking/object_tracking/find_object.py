@@ -55,7 +55,7 @@ class FindObject(Node):
     def compressed_image_callback(self, msg):
         self.image_frame = self.bridge.compressed_imgmsg_to_cv2(msg)
         self.hsv_frame = cv2.cvtColor(self.image_frame, cv2.COLOR_BGR2HSV)
-        self.update_display()
+        # self.update_display()
 
     def hsv_values_callback(self, msg):
         # self.get_logger().info('I heard: "%s"' % msg)
@@ -77,6 +77,9 @@ class FindObject(Node):
         mask = cv2.inRange(self.hsv_frame, lower_bound, upper_bound)
 
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) #Get only outermost contour, and save only some points on a straight line to save memory
+        obj_center = {}
+        obj_center["x"] = 160
+        obj_center["y"] = 160
 
         if contours:
             largest_contour = max(contours, key=cv2.contourArea) 
@@ -84,8 +87,15 @@ class FindObject(Node):
                 x, y, w, h = cv2.boundingRect(largest_contour)
                 cv2.rectangle(self.image_frame, (x,y), (x+w, y+h), (0, 255, 0), 2) #2 is thickness, Red color.
                 print("Inside hsv callback, Found an object, published to obj_center")
-                self.obj_center_publisher.publish(Int32MultiArray(data = [int(x+w/2), int(y+h/2)]))
-                self.update_display()
+                obj_center["x"] = int(x+w/2)
+                obj_center["y"] = int(y+h/2)
+            
+        
+        self.obj_center_publisher.publish(Int32MultiArray(data = [obj_center["x"], obj_center["y"]]))
+
+                
+        
+        self.update_display()
     
     def update_display(self):
         print("Inside Update display")

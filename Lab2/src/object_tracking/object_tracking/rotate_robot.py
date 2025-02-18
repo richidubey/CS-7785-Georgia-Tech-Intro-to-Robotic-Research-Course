@@ -66,7 +66,7 @@ class RotateRobot(Node):
         twist.angular.z = ANG_VEL_STEP_SIZE
         print("Inside Obj_Center_CallBack, publishing to cmd vel")
 
-        twist.angular.z = self.gain*(150 - x_diff)
+        twist.angular.z = self.gain*(160 - x_diff)
         self.cmd_vel_publisher.publish(twist)
 
 
