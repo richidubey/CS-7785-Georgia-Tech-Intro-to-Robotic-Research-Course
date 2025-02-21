@@ -22,7 +22,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 BURGER_MAX_LIN_VEL = 0.22
 BURGER_MAX_ANG_VEL = 2.84
 
-LIN_VEL_STEP_SIZE = 0.01
+LIN_VEL_STEP_SIZE = 0.0055
 ANG_VEL_STEP_SIZE = 0.2
 
 
@@ -45,7 +45,7 @@ class ChaseObject(Node):
         self.image_frame = None
         self.hsv_frame = None
         self.gain = ANG_VEL_STEP_SIZE/10
-        self.gain_lin = LIN_VEL_STEP_SIZE/5
+        self.gain_lin = LIN_VEL_STEP_SIZE
         self.lidar_message = None
     
 
@@ -65,8 +65,12 @@ class ChaseObject(Node):
         # print("Received angle (x_loc) is", angle)
         print("Received angle, dist: ", angle, dist)
         if dist!=0: 
-            twist.linear.x = self.gain_lin * (dist - 50)
-            print("Distnace isnt 0, so moving in x too!")
+            if dist > 19 and dist < 110:
+                twist.linear.x = self.gain_lin * (dist - 70)
+                print("Distnace isnt 0 and in range, so moving in x too!")
+            else:
+                twist.linear.x = 0.0
+                print("Dist out of range, so not moving")
         twist.angular.z = self.gain*(160 - angle)
         self.cmd_vel_publisher.publish(twist)
 
