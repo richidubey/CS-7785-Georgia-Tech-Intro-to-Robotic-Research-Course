@@ -64,14 +64,24 @@ class ChaseObject(Node):
         # print("Inside Obj_Center_Dist, publishing to cmd vel")
         # print("Received angle (x_loc) is", angle)
         print("Received angle, dist: ", angle, dist)
-        if dist!=0: 
-            if dist > 19 and dist < 110:
-                twist.linear.x = self.gain_lin * (dist - 70)
-                print("Distnace isnt 0 and in range, so moving in x too!")
-            else:
-                twist.linear.x = 0.0
-                print("Dist out of range, so not moving")
+
+        if dist == 0:
+            twist.linear.x = 0.0
+        else:
+            twist.linear.x = self.gain_lin * (dist - 40)
+    
         twist.angular.z = self.gain*(160 - angle)
+
+        if twist.angular.z > 2.84:
+            twist.angular.z = 2.84
+        elif twist.angular.z < -2.84:
+             twist.angular.z = -2.84
+        
+        if twist.linear.x > 0.22:
+            twist.linear.x = 0.22
+        elif twist.linear.x < -0.22:
+            twist.linear.x = -0.22
+
         self.cmd_vel_publisher.publish(twist)
 
 
