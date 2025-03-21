@@ -22,7 +22,8 @@ setup(
         'console_scripts': [
             'actual_odom=avoid_obstacle.actual_odom:main',
             'state_manager=avoid_obstacle.state_manager:main',
-            'goto_goal=avoid_obstacle.goto_goal:main'
+            'goto_goal=avoid_obstacle.goto_goal:main',
+            'avoid_obstacles=avoid_obstacle.avoid_obstacles:main'
         ],
     },
 )

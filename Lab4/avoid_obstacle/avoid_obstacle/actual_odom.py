@@ -49,7 +49,7 @@ class actual_odom(Node):
             #The initial data is stored to by subtracted to all the other values as we want to start at position (0,0) and orientation 0
             self.Init = False
             self.Init_ang = orientation
-            self.globalAng = (self.Init_ang)% (2 * np.pi)
+            self.globalAng = (self.Init_ang) 
             Mrot = np.matrix([[np.cos(self.Init_ang), np.sin(self.Init_ang)],[-np.sin(self.Init_ang), np.cos(self.Init_ang)]])        
             self.Init_pos.x = Mrot.item((0,0))*position.x + Mrot.item((0,1))*position.y
             self.Init_pos.y = Mrot.item((1,0))*position.x + Mrot.item((1,1))*position.y
@@ -59,15 +59,18 @@ class actual_odom(Node):
         #We subtract the initial values
         self.globalPos.x = Mrot.item((0,0))*position.x + Mrot.item((0,1))*position.y - self.Init_pos.x
         self.globalPos.y = Mrot.item((1,0))*position.x + Mrot.item((1,1))*position.y - self.Init_pos.y
-        self.globalAng = (orientation - self.Init_ang)% (2 * np.pi)
+        self.globalAng = (orientation - self.Init_ang)
         
+        self.globalAng = (self.globalAng + np.pi) % (2*np.pi) - np.pi
+
         val = Point()   
         val.x = self.globalPos.x 
         val.y = self.globalPos.y
         val.z = self.globalAng
 
         self.actual_odom_pub.publish(val)
-        self.get_logger().info('Transformed global pose is x:{}, y:{}, a:{}'.format(self.globalPos.x,self.globalPos.y,self.globalAng))
+    
+        print(f"Transformed global pose is {self.globalPos.x:.2f} {self.globalPos.y:.2f} {self.globalAng:.2f}")
     
 def main(args=None):
     rclpy.init(args=args)

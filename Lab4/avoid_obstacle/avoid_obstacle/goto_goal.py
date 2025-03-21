@@ -4,18 +4,17 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Float32MultiArray
 
 # etc
 import numpy as np
 import math
 
-state = 1
+#Keeping max lin .2 and angular 1.5
 
-file_handle = open('/home/richi/repos/cs7785/Lab4/avoid_obstacle/avoid_obstacle/wayPoints.txt', 'r')
-wayPoints=file_handle.readlines()
+LIN_VEL_GAIN = 0.5
+ANG_VEL_GAIN = 3.5 #1.5/1.60
 
-def get_float_from_line(line):
-    return list(map(float, line.split()))
 
 class goto_goal(Node):
     def __init__(self):
@@ -26,68 +25,83 @@ class goto_goal(Node):
             Point,
             '/actual_odom',
             self.actual_odom_callback,
-            10)
+            1)
         
         self.cmd_vel_publisher = self.create_publisher(
             Twist,
             '/cmd_vel',
-            10
+            1
         )
 
+        self.state_and_waypoint_sub = self.create_subscription(
+            Float32MultiArray,
+            '/state_and_waypoint',
+            self.state_and_waypoint_callback,
+            1
+        )
+        self.state = -1
+        self.goalX = -1.0
+        self.goalY = -1.0
+    
+    def state_and_waypoint_callback(self, msg):
+        # print(f"Received state and waypoint {int(msg.data[0])} {float(msg.data[1]):.2f} {float(msg.data[2]):.2f}")
+        self.state = int(msg.data[0])
+        self.goalX = float(msg.data[1])
+        self.goalY = float(msg.data[2])
+
     def actual_odom_callback(self, msg):
-        print("Received actual odom  val", msg.x, msg.y, msg.z)
+        print(f"\nReceived actual odom  val {msg.x:.2f} {msg.y:.2f} {msg.z:.2f}")
 
-        print("Goal State is: ", get_float_from_line(wayPoints[0])[0], get_float_from_line(wayPoints[0])[1])
+        if self.state!=0 and self.state!=1 and self.state!=2:
+            return
+        
+        diffX = self.goalX - msg.x
+        diffY = self.goalY - msg.y
+        print(f"State and waypoint is: {self.state} {self.goalX:.2f} {self.goalY:.2f}")
 
-        goalX = float(msg.x)
-        goalY = float(msg.y)
+        angleDiffGoal = np.arctan2(diffY, diffX)
+        #np arctan2 returns val in range -pi to pi
 
-        if(state == 1):
-            goalX = get_float_from_line(wayPoints[0])[0]
-            goalY = get_float_from_line(wayPoints[0])[1]
+        finalAngleDiff = np.arctan2(np.sin(angleDiffGoal - msg.z),  np.cos(angleDiffGoal - msg.z))
+        
+        #Or we can do:
+        # finalAngleDiff = angleDiffGoal - msg.z
+        # finalAngleDiff = (finalAngleDiff+ np.pi) % (2 * np.pi) - np.pi
+        
+
+        dist = math.sqrt( (diffX)**2 + (diffY)**2 )
         
         twist = Twist()
-        twist.angular.z = 0.0
-
-        #  msg.z > .3, Let it be
-        if(msg.z > .3 and msg.z < 3): #We move into -ve direction
-            twist.angular.z = -msg.z 
-
-        elif (msg.z > 3):
-            twist.angular.z = msg.z - 2.0
-
-        print("Message X - goal X is ", msg.x - goalX )
-        if(msg.x  - goalX < .30):
-            twist.linear.x = goalX - msg.x + .15
-        else:
-            twist.linear.x = 0.0
-
-        print("Message y - goal Y is ", msg.y - goalY )
-
-        if(msg.y - goalY > .09):
-            twist.angular.z = -0.9
-            if (twist.linear.x == 0):
-                twist.linear.x = 0.5
-        elif (msg.y - goalY< -.09):
-            twist.angular.z = 0.9
-            if (twist.linear.x == 0):
-                twist.linear.x = 0.5
-        else:
-            twist.angular.z = 0.0
-
-        if twist.angular.z > 2.84:
-            twist.angular.z = 2.84
-
-        elif twist.angular.z < -2.84:
-             twist.angular.z = -2.84
+        #Angle diff is bw 0 and 2.36 (2.36 for 180 deg), 1.18 for 90deg
+        twist.linear.x = dist*LIN_VEL_GAIN
+        twist.angular.z = ANG_VEL_GAIN*finalAngleDiff 
+        
+        print(f"Dist is: {dist:.2f}")
+        print(f"Angles: DiffGoal, OdomAngle, FinalAngleDiff: {angleDiffGoal:.2f} {msg.z:.2f} {finalAngleDiff:.2f}")
 
 
-        if twist.linear.x > 0.21:
-            twist.linear.x = 0.21
-        elif twist.linear.x < -0.21:
-            twist.linear.x = -0.21  
+        max_ang_vel = 1.5
+        twist.angular.z = max(min(twist.angular.z, max_ang_vel), -max_ang_vel)
+        
+        # if twist.angular.z > 2.84:
+        #     twist.angular.z = 2.84
+
+        # elif twist.angular.z < -2.84:
+        #      twist.angular.z = -2.84
 
         
+        
+        if twist.linear.x > 0.2:
+            twist.linear.x = 0.2
+        elif twist.linear.x < -0.2:
+            twist.linear.x = -0.2 
+
+        if twist.angular.z>1.0:
+            twist.linear.x = 0.0
+        
+        if(dist<.05):
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
 
         print("Pushing Linear x:",twist.linear.x ," And Angular z: ",twist.angular.z)
         
