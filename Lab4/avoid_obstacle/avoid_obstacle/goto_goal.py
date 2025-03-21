@@ -12,8 +12,8 @@ import math
 
 #Keeping max lin .2 and angular 1.5
 
-LIN_VEL_GAIN = 0.5
-ANG_VEL_GAIN = 3.5 #1.5/1.60
+LIN_VEL_GAIN = .6
+ANG_VEL_GAIN = 4.0 #1.5/1.60
 
 
 class goto_goal(Node):
@@ -52,7 +52,7 @@ class goto_goal(Node):
     def actual_odom_callback(self, msg):
         print(f"\nReceived actual odom  val {msg.x:.2f} {msg.y:.2f} {msg.z:.2f}")
 
-        if self.state!=0 and self.state!=1 and self.state!=2:
+        if(self.state < 0 or  self.state > 5):
             return
         
         diffX = self.goalX - msg.x
@@ -73,15 +73,33 @@ class goto_goal(Node):
         
         twist = Twist()
         #Angle diff is bw 0 and 2.36 (2.36 for 180 deg), 1.18 for 90deg
-        twist.linear.x = dist*LIN_VEL_GAIN
+
         twist.angular.z = ANG_VEL_GAIN*finalAngleDiff 
+
+        # if(finalAngleDiff>.5 and diffX >-0.1):
+        #     twist.linear.x = 0.0
+        # else:
+        #     if diffX <-0.1:
+        #         twist.linear.x = -dist*LIN_VEL_GAIN
+        #         twist.angular.z = 0.0
+                
+        #     else:
+        #         twist.linear.x = dist*LIN_VEL_GAIN
+        
+        twist.linear.x = dist*LIN_VEL_GAIN
+        
+        if(finalAngleDiff>.2 or finalAngleDiff<-.2):
+            twist.linear.x = 0.0
         
         print(f"Dist is: {dist:.2f}")
         print(f"Angles: DiffGoal, OdomAngle, FinalAngleDiff: {angleDiffGoal:.2f} {msg.z:.2f} {finalAngleDiff:.2f}")
 
 
-        max_ang_vel = 1.5
+        max_ang_vel = 2.0
+        max_lin_vel = .15
+        
         twist.angular.z = max(min(twist.angular.z, max_ang_vel), -max_ang_vel)
+        twist.linear.x = max(min(twist.linear.x, max_lin_vel) ,-max_lin_vel)
         
         # if twist.angular.z > 2.84:
         #     twist.angular.z = 2.84
@@ -90,16 +108,12 @@ class goto_goal(Node):
         #      twist.angular.z = -2.84
 
         
+        # if twist.linear.x > 0.2:
+        #     twist.linear.x = 0.2
+        # elif twist.linear.x < -0.2:
+        #     twist.linear.x = -0.2 
         
-        if twist.linear.x > 0.2:
-            twist.linear.x = 0.2
-        elif twist.linear.x < -0.2:
-            twist.linear.x = -0.2 
-
-        if twist.angular.z>1.0:
-            twist.linear.x = 0.0
-        
-        if(dist<.05):
+        if(dist<.02):
             twist.linear.x = 0.0
             twist.angular.z = 0.0
 

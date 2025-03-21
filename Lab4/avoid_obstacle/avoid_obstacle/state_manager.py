@@ -5,7 +5,9 @@ from std_msgs.msg import Float32MultiArray #List of floats
 import cv2
 import numpy as np
 from geometry_msgs.msg import Point
+from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool
+import time
 
 
 #State 100 means rotating left
@@ -27,6 +29,12 @@ class state_manager(Node):
             self.obstacle_in_the_way_callback,
             1
         )
+
+        self.cmd_vel_publisher = self.create_publisher(
+            Twist,
+            '/cmd_vel',
+            1
+        )
         
         self.state = 0
 
@@ -38,15 +46,28 @@ class state_manager(Node):
 
     def actual_odom_callback(self, msg):
         if self.obstacle_in_the_way:
-            self.state = self.state + 1
-            self.wayPoints.insert(self.state, [(msg.x - .3), msg.y])
+            twist = Twist()
+            twist.linear.x = -.1
+            tmpPub = Float32MultiArray()
+            tmpPub.data.append(-1.0)
+            tmpPub.data.append(-1.0)
+            tmpPub.data.append(-1.0)
+            self.state_and_waypoint_publisher.publish(tmpPub)
+            time.sleep(.05)
+            self.cmd_vel_publisher.publish(twist)
+            time.sleep(2)
+            if self.state < 3:
+                self.wayPoints.insert(self.state, [(msg.x - .6),  msg.y + .4]) #Move 20 cms to the left, from 40 cms in front cause thats the radius of our lidar rn
+            else:
+                self.wayPoints.insert(self.state, [(msg.x - .4),  msg.y - .6])
             self.obstacle_in_the_way=False
-            print("Moved to another state which is a 30 cms behind me baby")
+            print("Moved to a state which is a 40 cms to the left of me baby")
+            print("Waypoints now looks like: ", self.wayPoints)
 
         print(f"\nReceived actual odom  val {msg.x:.2f} {msg.y:.2f} {msg.z:.2f} and state is {self.state}")
         print("Current state is", self.state, "with self.wayPoints: ", self.wayPoints[self.state][0], self.wayPoints[self.state][1])
 
-        if (abs(msg.x - self.wayPoints[self.state][0])) <.1 and (abs(msg.y - self.wayPoints[self.state][1])) <.1:
+        if (abs(msg.x - self.wayPoints[self.state][0])) <.04 and (abs(msg.y - self.wayPoints[self.state][1])) <.04:
             self.state = self.state+1 
 
         msg = Float32MultiArray()
@@ -61,10 +82,7 @@ class state_manager(Node):
         print(f"\n\nIs there an obstacle in the way?: {msg.data} \n\n")
         #Put two new states -> one right behind the robot and one 40 cms to the left of the midpoint 
         #between the robot and the current goal and increase state to goto the goal right behind the robot
-        
         self.obstacle_in_the_way = msg.data
-
-
                
 def main(args=None):
     rclpy.init(args=args)

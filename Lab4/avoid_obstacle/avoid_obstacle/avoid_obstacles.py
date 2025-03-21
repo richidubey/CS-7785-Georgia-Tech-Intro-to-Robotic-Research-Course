@@ -3,6 +3,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Point
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool
+from geometry_msgs.msg import Twist
 
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
@@ -19,6 +20,12 @@ class avoid_obstacles(Node):
             QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, depth=1)
         )
 
+        self.cmd_vel_publisher = self.create_publisher(
+            Twist,
+            '/cmd_vel',
+            1
+        )
+
         self.obstacle_in_the_way_publisher = self.create_publisher(
             Bool,
             '/obstacle_in_the_way',
@@ -28,12 +35,16 @@ class avoid_obstacles(Node):
     def laser_scan_callback(self, msg):#Gives distance in meters
         print(f"Object in the front is : {msg.ranges[0]:.2f} units away")
 
-        if(msg.ranges[0] < .4):
+        if any(d < .4 for d in(msg.ranges[:2] +  msg.ranges[-2:])):
             print("An obj is right in front!")
             if not self.obstacles_in_front:
+                # twist = Twist()
+                # twist.linear.x = 0.0
+                # twist.angular.z = 0.0
                 self.obstacles_in_front = True
                 self.obstacle_in_the_way_publisher.publish(Bool(data = self.obstacles_in_front))
-                print("Published True Value to /obstacle_in_the_way")
+                # self.cmd_vel_publisher.publish(twist)
+                print("Published True Value to /obstacle_in_the_way")# and 0 0 to cmd_vel")
 
         else:
             self.obstacles_in_front = False
