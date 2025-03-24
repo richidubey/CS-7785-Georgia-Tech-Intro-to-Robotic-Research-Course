@@ -1,3 +1,8 @@
+# Group Name: Levi
+# Group Members:
+#  - Richi Dubey
+#  - Dyllon Preston
+
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray #List of floats
